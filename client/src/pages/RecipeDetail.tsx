@@ -1,4 +1,3 @@
-// client/src/pages/RecipeDetail.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -85,8 +84,8 @@ const RecipeDetail: React.FC = () => {
               onClick={() => navigate('/')}
               className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg"
             >
-              {/* Fix for TS2786: Icon components cannot be used as JSX */}
-              <HiArrowLeft className="mr-2" aria-hidden="true" /> Back to Home
+              {/* Fixed TS2786 error by using the icon as an element */}
+              {React.createElement(HiArrowLeft, { className: "mr-2", "aria-hidden": "true" })} Back to Home
             </button>
           </div>
         </div>
@@ -101,8 +100,8 @@ const RecipeDetail: React.FC = () => {
           onClick={() => navigate(-1)}
           className="inline-flex items-center text-teal-600 hover:text-teal-800 mb-6"
         >
-          {/* Fix for TS2786: Icon components cannot be used as JSX */}
-          <HiArrowLeft className="mr-1" aria-hidden="true" /> Back
+          {/* Fixed TS2786 error by using the icon as an element */}
+          {React.createElement(HiArrowLeft, { className: "mr-1", "aria-hidden": "true" })} Back
         </button>
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -125,11 +124,10 @@ const RecipeDetail: React.FC = () => {
               } transition-colors shadow-sm`}
               aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             >
-              {isFavorite ? (
-                <HiHeart className="w-6 h-6" aria-hidden="true" />
-              ) : (
-                <HiOutlineHeart className="w-6 h-6" aria-hidden="true" />
-              )}
+              {isFavorite ? 
+                React.createElement(HiHeart, { className: "w-6 h-6", "aria-hidden": "true" }) : 
+                React.createElement(HiOutlineHeart, { className: "w-6 h-6", "aria-hidden": "true" })
+              }
             </button>
           </div>
 
@@ -140,17 +138,17 @@ const RecipeDetail: React.FC = () => {
 
             <div className="flex flex-wrap gap-4 mb-6">
               <div className="flex items-center text-gray-600">
-                <HiClock className="w-5 h-5 mr-2 text-teal-600" aria-hidden="true" />
+                {React.createElement(HiClock, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
                 <span>Ready in {recipe.readyInMinutes} minutes</span>
               </div>
               <div className="flex items-center text-gray-600">
-                <HiUserGroup className="w-5 h-5 mr-2 text-teal-600" aria-hidden="true" />
+                {React.createElement(HiUserGroup, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
                 <span>{recipe.servings} servings</span>
               </div>
               {/* Fix for TS18048: 'recipe.healthScore' is possibly 'undefined' */}
               {recipe.healthScore !== undefined && recipe.healthScore > 0 && (
                 <div className="flex items-center text-gray-600">
-                  <HiShieldCheck className="w-5 h-5 mr-2 text-teal-600" aria-hidden="true" />
+                  {React.createElement(HiShieldCheck, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
                   <span>Health Score: {recipe.healthScore}%</span>
                 </div>
               )}
@@ -200,7 +198,7 @@ const RecipeDetail: React.FC = () => {
                       rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center text-teal-600 hover:text-teal-800"
                     >
-                      <HiLink className="mr-1" aria-hidden="true" /> View Original Recipe
+                      {React.createElement(HiLink, { className: "mr-1", "aria-hidden": "true" })} View Original Recipe
                     </a>
                   </div>
                 )}
@@ -215,7 +213,7 @@ const RecipeDetail: React.FC = () => {
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-teal-600 hover:text-teal-800"
                 >
-                  <HiLink className="mr-1" aria-hidden="true" /> View Original Recipe
+                  {React.createElement(HiLink, { className: "mr-1", "aria-hidden": "true" })} View Original Recipe
                 </a>
               </div>
             )}

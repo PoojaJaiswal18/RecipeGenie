@@ -229,6 +229,17 @@ const Profile: React.FC = () => {
   // Safely access user preferences with UI fields
   const uiPreferences = user?.preferences as UIPreferences || {};
   
+  // Fix for React icons in TypeScript
+  const IconCheck = HiCheck as React.ElementType;
+  const IconExclamationCircle = HiExclamationCircle as React.ElementType;
+  const IconPencil = HiPencil as React.ElementType;
+  const IconUser = HiUser as React.ElementType;
+  const IconMail = HiMail as React.ElementType;
+  const IconX = HiX as React.ElementType;
+  const IconSave = HiSave as React.ElementType;
+  const IconOutlineHeart = HiOutlineHeart as React.ElementType;
+  const IconOutlineClock = HiOutlineClock as React.ElementType;
+  
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -244,9 +255,9 @@ const Profile: React.FC = () => {
             <div className="flex">
               <div className="flex-shrink-0">
                 {message.type === 'success' ? (
-                  <HiCheck className="h-5 w-5 text-green-400" />
+                  <IconCheck className="h-5 w-5 text-green-400" />
                 ) : (
-                  <HiExclamationCircle className="h-5 w-5 text-red-400" />
+                  <IconExclamationCircle className="h-5 w-5 text-red-400" />
                 )}
               </div>
               <div className="ml-3">
@@ -272,7 +283,7 @@ const Profile: React.FC = () => {
                     onClick={() => setIsEditingProfile(true)}
                     className="text-indigo-600 hover:text-indigo-800 flex items-center"
                   >
-                    <HiPencil className="w-4 h-4 mr-1" />
+                    <IconPencil className="w-4 h-4 mr-1" />
                     Edit
                   </button>
                 )}
@@ -286,7 +297,7 @@ const Profile: React.FC = () => {
                     </label>
                     <div className="mt-1 relative rounded-md shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <HiUser className="h-5 w-5 text-gray-400" />
+                        <IconUser className="h-5 w-5 text-gray-400" />
                       </div>
                       <input
                         type="text"
@@ -305,7 +316,7 @@ const Profile: React.FC = () => {
                     </label>
                     <div className="mt-1 relative rounded-md shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <HiMail className="h-5 w-5 text-gray-400" />
+                        <IconMail className="h-5 w-5 text-gray-400" />
                       </div>
                       <input
                         type="email"
@@ -324,7 +335,7 @@ const Profile: React.FC = () => {
                       onClick={() => setIsEditingProfile(false)}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <HiX className="h-4 w-4 mr-2 -ml-1" />
+                      <IconX className="mr-2 -ml-1 h-4 w-4" />
                       Cancel
                     </button>
                     <button
@@ -333,7 +344,7 @@ const Profile: React.FC = () => {
                       disabled={isSaving}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <HiSave className="h-4 w-4 mr-2 -ml-1" />
+                      <IconSave className="mr-2 -ml-1 h-4 w-4" />
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
@@ -341,11 +352,11 @@ const Profile: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center">
-                    <HiUser className="h-5 w-5 text-gray-400 mr-2" />
+                    <IconUser className="h-5 w-5 text-gray-400 mr-2" />
                     <span className="text-gray-800">{user?.name}</span>
                   </div>
                   <div className="flex items-center">
-                    <HiMail className="h-5 w-5 text-gray-400 mr-2" />
+                    <IconMail className="h-5 w-5 text-gray-400 mr-2" />
                     <span className="text-gray-800">{user?.email}</span>
                   </div>
                 </div>
@@ -361,7 +372,7 @@ const Profile: React.FC = () => {
                     onClick={() => setIsEditingPreferences(true)}
                     className="text-indigo-600 hover:text-indigo-800 flex items-center"
                   >
-                    <HiPencil className="h-4 w-4 mr-1" />
+                    <IconPencil className="w-4 h-4 mr-1" />
                     Edit
                   </button>
                 )}
@@ -435,7 +446,7 @@ const Profile: React.FC = () => {
                       onClick={() => setIsEditingPreferences(false)}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <HiX className="h-4 w-4 mr-2 -ml-1" />
+                      <IconX className="mr-2 -ml-1 h-4 w-4" />
                       Cancel
                     </button>
                     <button
@@ -444,7 +455,7 @@ const Profile: React.FC = () => {
                       disabled={isSaving}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <HiSave className="h-4 w-4 mr-2 -ml-1" />
+                      <IconSave className="mr-2 -ml-1 h-4 w-4" />
                       {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
@@ -512,7 +523,7 @@ const Profile: React.FC = () => {
                     } flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm`}
                   >
                     <div className="flex items-center justify-center">
-                      <HiOutlineHeart className="h-5 w-5 mr-2" />
+                      <IconOutlineHeart className="mr-2 h-5 w-5" />
                       Favorite Recipes
                     </div>
                   </button>
@@ -525,7 +536,7 @@ const Profile: React.FC = () => {
                     } flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm`}
                   >
                     <div className="flex items-center justify-center">
-                      <HiOutlineClock className="h-5 w-5 mr-2" />
+                      <IconOutlineClock className="mr-2 h-5 w-5" />
                       Recently Viewed
                     </div>
                   </button>
@@ -553,7 +564,7 @@ const Profile: React.FC = () => {
                           </div>
                         ) : (
                           <div className="text-center py-12">
-                            <HiOutlineHeart className="h-12 w-12 text-gray-400 mx-auto" />
+                            <IconOutlineHeart className="mx-auto h-12 w-12 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No favorites yet</h3>
                             <p className="mt-1 text-sm text-gray-500">
                               Start adding recipes to your favorites.
@@ -577,7 +588,7 @@ const Profile: React.FC = () => {
                           </div>
                         ) : (
                           <div className="text-center py-12">
-                            <HiOutlineClock className="h-12 w-12 text-gray-400 mx-auto" />
+                            <IconOutlineClock className="mx-auto h-12 w-12 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No recent recipes</h3>
                             <p className="mt-1 text-sm text-gray-500">
                               Recipes you view will appear here.
