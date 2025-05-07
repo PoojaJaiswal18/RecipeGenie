@@ -3,14 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Provider } from 'react-redux';
 import store, { useAppSelector } from './redux/store';
 
-// Pages
 import Home from './pages/Home';
 import RecipeDetail from './pages/RecipeDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 
-// Components
 import Layout from './components/common/Layout';
 
 // Auth protection for routes

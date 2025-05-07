@@ -4,10 +4,22 @@ import { toast } from 'react-toastify';
 import Layout from '../components/common/Layout';
 import recipeApi, { Recipe } from '../api/recipes';
 import authApi from '../api/auth';
+// Import icons individually and use them as React components
 import { 
   HiClock, HiUserGroup, HiHeart, HiOutlineHeart, 
-  HiArrowLeft, HiLink, HiShieldCheck
+  HiArrowLeft, HiLink, HiShieldCheck 
 } from 'react-icons/hi';
+import { IconType } from 'react-icons';
+
+// Fixed wrapper component for icons to resolve TypeScript issues
+function IconWrapper({ 
+  icon: Icon, 
+  ...props 
+}: { 
+  icon: IconType
+} & React.SVGAttributes<SVGElement>) {
+  return React.createElement(Icon as React.ComponentType<React.SVGAttributes<SVGElement>>, props);
+}
 
 const RecipeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +38,6 @@ const RecipeDetail: React.FC = () => {
       try {
         const recipeData = await recipeApi.getRecipeById(id);
         setRecipe(recipeData);
-        // Fix for TS2345: Argument of type 'boolean | undefined' is not assignable to parameter of type 'SetStateAction<boolean>'
         setIsFavorite(recipeData.isFavorite || false);
       } catch (error) {
         console.error('Error fetching recipe details:', error);
@@ -84,8 +95,7 @@ const RecipeDetail: React.FC = () => {
               onClick={() => navigate('/')}
               className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg"
             >
-              {/* Fixed TS2786 error by using the icon as an element */}
-              {React.createElement(HiArrowLeft, { className: "mr-2", "aria-hidden": "true" })} Back to Home
+              <IconWrapper icon={HiArrowLeft} className="mr-2" /> Back to Home
             </button>
           </div>
         </div>
@@ -100,8 +110,7 @@ const RecipeDetail: React.FC = () => {
           onClick={() => navigate(-1)}
           className="inline-flex items-center text-teal-600 hover:text-teal-800 mb-6"
         >
-          {/* Fixed TS2786 error by using the icon as an element */}
-          {React.createElement(HiArrowLeft, { className: "mr-1", "aria-hidden": "true" })} Back
+          <IconWrapper icon={HiArrowLeft} className="mr-1" /> Back
         </button>
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -125,8 +134,8 @@ const RecipeDetail: React.FC = () => {
               aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             >
               {isFavorite ? 
-                React.createElement(HiHeart, { className: "w-6 h-6", "aria-hidden": "true" }) : 
-                React.createElement(HiOutlineHeart, { className: "w-6 h-6", "aria-hidden": "true" })
+                <IconWrapper icon={HiHeart} className="w-6 h-6" /> : 
+                <IconWrapper icon={HiOutlineHeart} className="w-6 h-6" />
               }
             </button>
           </div>
@@ -138,24 +147,22 @@ const RecipeDetail: React.FC = () => {
 
             <div className="flex flex-wrap gap-4 mb-6">
               <div className="flex items-center text-gray-600">
-                {React.createElement(HiClock, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
+                <IconWrapper icon={HiClock} className="w-5 h-5 mr-2 text-teal-600" />
                 <span>Ready in {recipe.readyInMinutes} minutes</span>
               </div>
               <div className="flex items-center text-gray-600">
-                {React.createElement(HiUserGroup, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
+                <IconWrapper icon={HiUserGroup} className="w-5 h-5 mr-2 text-teal-600" />
                 <span>{recipe.servings} servings</span>
               </div>
-              {/* Fix for TS18048: 'recipe.healthScore' is possibly 'undefined' */}
               {recipe.healthScore !== undefined && recipe.healthScore > 0 && (
                 <div className="flex items-center text-gray-600">
-                  {React.createElement(HiShieldCheck, { className: "w-5 h-5 mr-2 text-teal-600", "aria-hidden": "true" })}
+                  <IconWrapper icon={HiShieldCheck} className="w-5 h-5 mr-2 text-teal-600" />
                   <span>Health Score: {recipe.healthScore}%</span>
                 </div>
               )}
             </div>
 
             <div className="prose max-w-none mb-8">
-              {/* Fix for TS2322: Type 'string | undefined' is not assignable to type 'string | TrustedHTML' */}
               <div dangerouslySetInnerHTML={{ __html: recipe.summary || '' }} />
             </div>
 
@@ -164,11 +171,9 @@ const RecipeDetail: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Ingredients</h2>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <ul className="space-y-2">
-                    {/* Fix for TS2461: Type 'Ingredient[] | undefined' is not an array type */}
                     {[...(recipe.usedIngredients || []), ...(recipe.missedIngredients || [])].map((ingredient) => (
                       <li key={ingredient.id} className="flex items-start">
                         <span className={`inline-block w-2 h-2 rounded-full mt-2 mr-2 ${
-                          // Fix for TS18048: 'recipe.usedIngredients' is possibly 'undefined'
                           recipe.usedIngredients?.some(i => i.id === ingredient.id)
                             ? 'bg-green-500'
                             : 'bg-orange-500'
@@ -198,7 +203,7 @@ const RecipeDetail: React.FC = () => {
                       rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center text-teal-600 hover:text-teal-800"
                     >
-                      {React.createElement(HiLink, { className: "mr-1", "aria-hidden": "true" })} View Original Recipe
+                      <IconWrapper icon={HiLink} className="mr-1" /> View Original Recipe
                     </a>
                   </div>
                 )}
@@ -213,7 +218,7 @@ const RecipeDetail: React.FC = () => {
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-teal-600 hover:text-teal-800"
                 >
-                  {React.createElement(HiLink, { className: "mr-1", "aria-hidden": "true" })} View Original Recipe
+                  <IconWrapper icon={HiLink} className="mr-1" /> View Original Recipe
                 </a>
               </div>
             )}

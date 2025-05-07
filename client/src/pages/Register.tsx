@@ -4,6 +4,17 @@ import { useDispatch } from 'react-redux';
 import authApi from '../api/auth'; 
 import { setCredentials } from '../redux/slices/authSlice';
 import { HiMail, HiLockClosed, HiUser, HiExclamationCircle } from 'react-icons/hi';
+import type { IconType } from 'react-icons';
+
+// Helper component to render icons safely with fixed TypeScript error
+function Icon({ 
+  icon: IconComponent, 
+  ...props 
+}: { 
+  icon: IconType 
+} & React.SVGAttributes<SVGElement>) {
+  return React.createElement(IconComponent as React.ComponentType<React.SVGAttributes<SVGElement>>, props);
+}
 
 const Register: React.FC = () => {
   const dispatch = useDispatch();
@@ -120,7 +131,7 @@ const Register: React.FC = () => {
           <div className="rounded-md bg-red-50 p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <HiExclamationCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                <Icon icon={HiExclamationCircle} className="h-5 w-5 text-red-400" aria-hidden="true" />
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">{errors.general}</h3>
@@ -137,7 +148,7 @@ const Register: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiUser className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Icon icon={HiUser} className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
                   id="name"
@@ -163,7 +174,7 @@ const Register: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiMail className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Icon icon={HiMail} className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
                   id="email"
@@ -189,7 +200,7 @@ const Register: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiLockClosed className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Icon icon={HiLockClosed} className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
                   id="password"
@@ -215,7 +226,7 @@ const Register: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiLockClosed className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Icon icon={HiLockClosed} className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
                   id="confirmPassword"

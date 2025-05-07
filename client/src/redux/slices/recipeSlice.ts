@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import recipesApi from '../../api/recipes';
+import recipeApi from '../../api/recipes';
 
 export interface Ingredient {
   id: string;
@@ -12,17 +12,19 @@ export interface Recipe {
   image: string;
   readyInMinutes: number;
   servings: number;
-  summary: string;
-  instructions: string;
-  missedIngredientCount: number;
-  usedIngredientCount: number;
-  likes: number;
-  healthScore: number;
-  cuisines: string[];
-  dishTypes: string[];
-  diets: string[];
-  usedIngredients: Ingredient[];
-  missedIngredients: Ingredient[];
+  summary?: string;
+  instructions?: string;
+  missedIngredientCount?: number;
+  usedIngredientCount?: number;
+  likes?: number;
+  healthScore?: number;
+  cuisines?: string[];
+  dishTypes?: string[];
+  diets?: string[];
+  usedIngredients?: Ingredient[];
+  missedIngredients?: Ingredient[];
+  isFavorite?: boolean;
+  sourceUrl?: string;
 }
 
 interface RecipeState {
@@ -41,6 +43,9 @@ interface RecipeState {
   };
 }
 
+// Import RecipeSearchParams from API
+import { RecipeSearchParams } from '../../api/recipes';
+
 const initialState: RecipeState = {
   recipes: [],
   filteredRecipes: [],
@@ -57,13 +62,12 @@ const initialState: RecipeState = {
   },
 };
 
-// Async thunks
-export const searchRecipesByIngredients = createAsyncThunk(
+export const searchRecipesByIngredients = createAsyncThunk<Recipe[], string[], { rejectValue: string }>(
   'recipes/searchByIngredients',
   async (ingredients: string[], { rejectWithValue }) => {
     try {
-      const response = await recipesApi.searchByIngredients(ingredients);
-      return response.data;
+      const params: RecipeSearchParams = { ingredients };
+      return await recipeApi.searchByIngredients(params);
     } catch (error) {
       if (error instanceof Error) {
         return rejectWithValue(error.message);
@@ -73,12 +77,11 @@ export const searchRecipesByIngredients = createAsyncThunk(
   }
 );
 
-export const getRecipeDetails = createAsyncThunk(
+export const getRecipeDetails = createAsyncThunk<Recipe, string, { rejectValue: string }>(
   'recipes/getDetails',
   async (recipeId: string, { rejectWithValue }) => {
     try {
-      const response = await recipesApi.getRecipeById(recipeId);
-      return response.data;
+      return await recipeApi.getRecipeById(recipeId);
     } catch (error) {
       if (error instanceof Error) {
         return rejectWithValue(error.message);
@@ -88,17 +91,29 @@ export const getRecipeDetails = createAsyncThunk(
   }
 );
 
-export const toggleFavoriteRecipe = createAsyncThunk(
+interface ToggleFavoriteResult {
+  recipeId: string;
+  isFavorited: boolean;
+}
+
+export const toggleFavoriteRecipe = createAsyncThunk<
+  ToggleFavoriteResult,
+  string,
+  { 
+    rejectValue: string;
+    state: { recipes: RecipeState };
+  }
+>(
   'recipes/toggleFavorite',
   async (recipeId: string, { getState, rejectWithValue }) => {
     try {
-      const state = getState() as { recipes: RecipeState };
+      const state = getState();
       const isFavorited = state.recipes.favoriteRecipes.includes(recipeId);
       
       if (isFavorited) {
-        await recipesApi.removeFromFavorites(recipeId);
+        await recipeApi.removeFromFavorites(recipeId);
       } else {
-        await recipesApi.addToFavorites(recipeId);
+        await recipeApi.addToFavorites(recipeId);
       }
       
       return { recipeId, isFavorited };
@@ -111,12 +126,11 @@ export const toggleFavoriteRecipe = createAsyncThunk(
   }
 );
 
-export const getFavoriteRecipes = createAsyncThunk(
+export const getFavoriteRecipes = createAsyncThunk<Recipe[], void, { rejectValue: string }>(
   'recipes/getFavorites',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await recipesApi.getFavorites();
-      return response.data;
+      return await recipeApi.getFavoriteRecipes();
     } catch (error) {
       if (error instanceof Error) {
         return rejectWithValue(error.message);
@@ -152,18 +166,20 @@ const recipeSlice = createSlice({
           passes = false;
         }
         
-        if (state.filters.cuisineType && !recipe.cuisines.includes(state.filters.cuisineType)) {
+        if (state.filters.cuisineType && recipe.cuisines && 
+            !recipe.cuisines.includes(state.filters.cuisineType)) {
           passes = false;
         }
         
-        if (state.filters.dietaryRestrictions.length > 0) {
+        if (state.filters.dietaryRestrictions.length > 0 && recipe.diets) {
           const hasAllDiets = state.filters.dietaryRestrictions.every(diet => 
-            recipe.diets.includes(diet)
+            recipe.diets?.includes(diet)
           );
           if (!hasAllDiets) passes = false;
         }
         
-        if (state.filters.minHealthScore && recipe.healthScore < state.filters.minHealthScore) {
+        if (state.filters.minHealthScore && recipe.healthScore !== undefined && 
+            recipe.healthScore < state.filters.minHealthScore) {
           passes = false;
         }
         
@@ -225,8 +241,8 @@ const recipeSlice = createSlice({
       })
       
       // Get favorite recipes
-      .addCase(getFavoriteRecipes.fulfilled, (state, action: PayloadAction<string[]>) => {
-        state.favoriteRecipes = action.payload;
+      .addCase(getFavoriteRecipes.fulfilled, (state, action: PayloadAction<Recipe[]>) => {
+        state.favoriteRecipes = action.payload.map(recipe => recipe.id);
       });
   },
 });
