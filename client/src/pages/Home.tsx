@@ -1,7 +1,6 @@
 // client/src/pages/Home.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import Layout from '../components/common/Layout';
 import IngredientInput from '../components/recipe/IngredientInput';
 import RecipeList from '../components/recipe/RecipeList';
 import recipeApi, { Recipe, RecipeSearchParams } from '../api/recipes';
@@ -92,7 +91,7 @@ const Home: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
       <section className="bg-gradient-to-b from-teal-500 to-teal-600 text-white py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
@@ -199,7 +198,7 @@ const Home: React.FC = () => {
           </div>
         </section>
       )}
-    </Layout>
+    </>
   );
 };
 
