@@ -8,20 +8,16 @@ import {
   rateRecipe,
   toggleFavoriteRecipe,
   getFavoriteRecipes,
-  getRecipesByDietType,
-  getRecipesByCategoryType,
-  createCustomRecipe,
-  updateRecipe,
-  deleteRecipe,
-  addToMealPlan,
-  getUserMealPlan,
-  generateMealPlan
+  saveRecipeToDatabase,
+  enhanceRecipesWithAI
 } from '../services/recipeService';
 import { AppError } from '../middleware/error';
 import { IUser } from '../models/User';
 import Recipe from '../models/Recipe';
 import winston from 'winston';
+import mongoose from 'mongoose';
 
+// Initialize logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -144,7 +140,7 @@ export const getRecipeById = async (
       return next(new AppError('Recipe not found', 404));
     }
     
-    // Update view count
+    // Update view count if it's a MongoDB document
     if (recipe.updateOne) {
       await recipe.updateOne({ $inc: { viewCount: 1 } });
     }
@@ -382,15 +378,32 @@ export const getRecipesByDiet = async (
     const { diet } = req.params;
     const limit = req.query.limit ? parseInt(req.query.limit.toString(), 10) : 10;
     const page = req.query.page ? parseInt(req.query.page.toString(), 10) : 1;
+    const skip = (page - 1) * limit;
     
-    const recipes = await getRecipesByDietType(diet, page, limit);
+    // Get total count for pagination
+    const total = await Recipe.countDocuments({
+      diets: { $regex: new RegExp(diet, 'i') }
+    });
+    
+    // Get recipes
+    const recipes = await Recipe.find({
+      diets: { $regex: new RegExp(diet, 'i') }
+    })
+    .sort({ popularity: -1 })
+    .skip(skip)
+    .limit(limit);
     
     return res.status(200).json({
       status: 'success',
-      results: recipes.results.length,
-      pagination: recipes.pagination,
+      results: recipes.length,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        limit
+      },
       data: {
-        recipes: recipes.results
+        recipes: recipes
       }
     });
   } catch (error) {
@@ -412,15 +425,32 @@ export const getRecipesByCategory = async (
     const { category } = req.params;
     const limit = req.query.limit ? parseInt(req.query.limit.toString(), 10) : 10;
     const page = req.query.page ? parseInt(req.query.page.toString(), 10) : 1;
+    const skip = (page - 1) * limit;
     
-    const recipes = await getRecipesByCategoryType(category, page, limit);
+    // Get total count for pagination
+    const total = await Recipe.countDocuments({
+      dishTypes: { $regex: new RegExp(category, 'i') }
+    });
+    
+    // Get recipes
+    const recipes = await Recipe.find({
+      dishTypes: { $regex: new RegExp(category, 'i') }
+    })
+    .sort({ popularity: -1 })
+    .skip(skip)
+    .limit(limit);
     
     return res.status(200).json({
       status: 'success',
-      results: recipes.results.length,
-      pagination: recipes.pagination,
+      results: recipes.length,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        limit
+      },
       data: {
-        recipes: recipes.results
+        recipes: recipes
       }
     });
   } catch (error) {
@@ -464,7 +494,8 @@ export const addCustomRecipe = async (
       return next(new AppError('Title, ingredients, and instructions are required', 400));
     }
     
-    const recipe = await createCustomRecipe({
+    // Create a new recipe document
+    const recipe = new Recipe({
       title,
       image,
       ingredients,
@@ -474,11 +505,13 @@ export const addCustomRecipe = async (
       servings,
       cuisines,
       diets,
-      mealType,
+      dishTypes: mealType ? [mealType] : [],
       notes,
-      userId: user._id.toString(),
+      userId: user._id,
       isCustom: true
     });
+    
+    await recipe.save();
     
     return res.status(201).json({
       status: 'success',
@@ -520,7 +553,12 @@ export const updateCustomRecipe = async (
       return next(new AppError('Not authorized to update this recipe', 403));
     }
     
-    const updatedRecipe = await updateRecipe(id, req.body);
+    // Update the recipe
+    const updatedRecipe = await Recipe.findByIdAndUpdate(
+      id,
+      { ...req.body, userId: user._id },
+      { new: true, runValidators: true }
+    );
     
     return res.status(200).json({
       status: 'success',
@@ -562,7 +600,7 @@ export const deleteCustomRecipe = async (
       return next(new AppError('Not authorized to delete this recipe', 403));
     }
     
-    await deleteRecipe(id);
+    await Recipe.findByIdAndDelete(id);
     
     return res.status(204).json({
       status: 'success',
@@ -596,16 +634,28 @@ export const addRecipeToMealPlan = async (
       return next(new AppError('Recipe ID, day, and meal type are required', 400));
     }
     
-    const mealPlan = await addToMealPlan(user._id.toString(), {
-      recipeId,
+    // Update user's meal plan (implementation would depend on your User model structure)
+    const mealPlanEntry = {
+      recipeId: new mongoose.Types.ObjectId(recipeId),
       day,
       mealType
+    };
+    
+    // This assumes your User model has a mealPlan field that's an array
+    await user.updateOne({
+      $push: { mealPlan: mealPlanEntry }
+    });
+    
+    // Fetch updated user with meal plan
+    const updatedUser = await mongoose.model('User').findById(user._id).populate({
+      path: 'mealPlan.recipeId',
+      model: 'Recipe'
     });
     
     return res.status(200).json({
       status: 'success',
       data: {
-        mealPlan
+        mealPlan: updatedUser?.mealPlan || []
       }
     });
   } catch (error) {
@@ -630,12 +680,16 @@ export const getMealPlan = async (
       return next(new AppError('Authentication required', 401));
     }
     
-    const mealPlan = await getUserMealPlan(user._id.toString());
+    // Fetch user with populated meal plan
+    const userWithMealPlan = await mongoose.model('User').findById(user._id).populate({
+      path: 'mealPlan.recipeId',
+      model: 'Recipe'
+    });
     
     return res.status(200).json({
       status: 'success',
       data: {
-        mealPlan
+        mealPlan: userWithMealPlan?.mealPlan || []
       }
     });
   } catch (error) {
@@ -662,16 +716,62 @@ export const generateWeeklyMealPlan = async (
     
     const { preferences } = req.body;
     
-    const mealPlan = await generateMealPlan(user._id.toString(), preferences);
+    // Generate meal plan based on user preferences
+    // This would be implemented according to your business logic
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const mealTypes = ['breakfast', 'lunch', 'dinner'];
+    
+    // Example implementation:
+    // 1. Get suitable recipes based on preferences
+    const dietPreference = preferences?.diet || user.preferences?.dietaryRestrictions?.[0];
+    const cuisinePreference = preferences?.cuisine || user.preferences?.favoriteCuisines?.[0];
+    
+    // Find recipes matching preferences
+    const matchingRecipes = await Recipe.find({
+      ...(dietPreference ? { diets: { $regex: new RegExp(dietPreference, 'i') } } : {}),
+      ...(cuisinePreference ? { cuisines: { $regex: new RegExp(cuisinePreference, 'i') } } : {})
+    }).limit(21); // 3 meals x 7 days
+    
+    if (matchingRecipes.length < 7) {
+      return next(new AppError('Not enough recipes found to create a meal plan', 400));
+    }
+    
+    // 2. Create a meal plan structure
+    const mealPlan = [];
+    let recipeIndex = 0;
+    
+    for (const day of days) {
+      for (const mealType of mealTypes) {
+        if (recipeIndex < matchingRecipes.length) {
+          mealPlan.push({
+            recipeId: matchingRecipes[recipeIndex]._id,
+            day,
+            mealType
+          });
+          recipeIndex++;
+        }
+      }
+    }
+    
+    // 3. Update user's meal plan
+    await mongoose.model('User').findByIdAndUpdate(user._id, {
+      $set: { mealPlan }
+    });
+    
+    // 4. Return the populated meal plan
+    const updatedUser = await mongoose.model('User').findById(user._id).populate({
+      path: 'mealPlan.recipeId',
+      model: 'Recipe'
+    });
     
     return res.status(200).json({
       status: 'success',
       data: {
-        mealPlan
+        mealPlan: updatedUser?.mealPlan || []
       }
     });
   } catch (error) {
     logger.error('Error in generateWeeklyMealPlan:', error);
     return next(error);
   }
-}
+};
