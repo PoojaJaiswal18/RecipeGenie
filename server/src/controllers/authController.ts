@@ -247,7 +247,8 @@ export const updatePassword = async (
     }
     
     // Get user with password
-    const user = await User.findById(req.user?._id).select('+password');
+    const userId = (req.user as IUser)._id; // Fix: Use type assertion for req.user and access _id safely
+    const user = await User.findById(userId).select('+password');
     
     if (!user) {
       throw new AppError('User not found', 404);
