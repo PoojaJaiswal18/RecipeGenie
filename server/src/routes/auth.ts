@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
-import { AppError } from './error';
+import { AppError } from '../middleware/error';
 import User, { IUser } from '../models/User';
 import winston from 'winston';
 
@@ -22,20 +22,16 @@ const logger = winston.createLogger({
   ]
 });
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-      token?: string;
-    }
-  }
+// Create a custom interface that extends Express Request but with our custom properties
+interface AuthenticatedRequest extends Request {
+  currentUser?: IUser;
+  authToken?: string;
 }
 
 /**
  * Middleware to protect routes that require authentication
  */
-export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const protect = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // 1) Check if token exists
     let token;
@@ -73,8 +69,12 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     // Grant access to protected route
-    req.user = currentUser;
-    req.token = token;
+    req.currentUser = currentUser;
+    req.authToken = token;
+    
+    // Also assign to standard req.user for compatibility with other middleware
+    (req as any).user = currentUser;
+    
     next();
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
@@ -92,7 +92,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 /**
  * Optional authentication middleware - attaches user if token exists but doesn't require it
  */
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const optionalAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // 1) Check if token exists
     let token;
@@ -119,8 +119,12 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Attach user to request
-    req.user = currentUser;
-    req.token = token;
+    req.currentUser = currentUser;
+    req.authToken = token;
+    
+    // Also assign to standard req.user for compatibility
+    (req as any).user = currentUser;
+    
     next();
   } catch (err) {
     // If token validation fails, just continue without a user
@@ -133,9 +137,9 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
  * Middleware to restrict access to certain user roles
  */
 export const restrictTo = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check if user exists and has required role
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.currentUser || !roles.includes(req.currentUser.role)) {
       return next(
         new AppError('You do not have permission to perform this action', 403)
       );
@@ -148,9 +152,9 @@ export const restrictTo = (...roles: string[]) => {
  * Middleware to check if user is accessing their own resource
  */
 export const isResourceOwner = (paramIdField: string = 'id') => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const resourceId = req.params[paramIdField];
-    const userId = req.user?._id.toString();
+    const userId = req.currentUser?._id?.toString();
     
     if (!userId || resourceId !== userId) {
       return next(

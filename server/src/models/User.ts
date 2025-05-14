@@ -1,41 +1,39 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import { Schema, model, Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
+import crypto from 'crypto';
 
-// User preferences interface
-interface IPreferences {
-  dietaryRestrictions: string[];
-  favoriteCuisines: string[];
-  allergies: string[];
-  dislikedIngredients: string[];
-}
-
-// User interface
+/**
+ * User Interface extending Document
+ */
 export interface IUser extends Document {
-  email: string;
-  password: string;
   name: string;
-  isActive: boolean;
-  role: 'user' | 'admin';
-  preferences: IPreferences;
-  favoriteRecipes: mongoose.Types.ObjectId[];
-  searchHistory: string[];
-  lastActive: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  email: string;
+  photo?: string;
+  role: string;
+  password: string;
+  passwordConfirm?: string;
   passwordChangedAt?: Date;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  active: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
   changedPasswordAfter(JWTTimestamp: number): boolean;
+  createPasswordResetToken(): string;
 }
 
-// User model interface
-interface IUserModel extends Model<IUser> {
-  // Add any static methods here if needed
-}
-
-// User schema
-const userSchema = new Schema<IUser, IUserModel>(
+/**
+ * User Schema
+ */
+const userSchema = new Schema<IUser>(
   {
+    name: {
+      type: String,
+      required: [true, 'Please tell us your name'],
+      trim: true,
+      maxlength: [40, 'A name must have less or equal than 40 characters'],
+      minlength: [2, 'A name must have more or equal than 2 characters']
+    },
     email: {
       type: String,
       required: [true, 'Please provide your email'],
@@ -43,39 +41,40 @@ const userSchema = new Schema<IUser, IUserModel>(
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email']
     },
+    photo: {
+      type: String,
+      default: 'default.jpg'
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'editor'],
+      default: 'user'
+    },
     password: {
       type: String,
       required: [true, 'Please provide a password'],
       minlength: 8,
-      select: false  // Don't send password in query results
+      select: false
     },
-    name: {
+    passwordConfirm: {
       type: String,
-      required: [true, 'Please provide your name'],
-      trim: true
+      required: [true, 'Please confirm your password'],
+      validate: {
+        // This only works on CREATE and SAVE
+        validator: function(this: IUser, val: string): boolean {
+          return val === this.password;
+        },
+        message: 'Passwords are not the same!'
+      }
     },
-    isActive: {
+    passwordChangedAt: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    active: {
       type: Boolean,
-      default: true
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
-    },
-    preferences: {
-      dietaryRestrictions: [String],
-      favoriteCuisines: [String],
-      allergies: [String],
-      dislikedIngredients: [String]
-    },
-    favoriteRecipes: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Recipe'
-    }],
-    searchHistory: [String],
-    lastActive: Date,
-    passwordChangedAt: Date
+      default: true,
+      select: false
+    }
   },
   {
     timestamps: true,
@@ -84,39 +83,54 @@ const userSchema = new Schema<IUser, IUserModel>(
   }
 );
 
-// Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ createdAt: -1 });
-
-// Hash password before saving
+/**
+ * Pre-save middleware to hash password
+ */
 userSchema.pre<IUser>('save', async function(next) {
   // Only run this function if password was modified
   if (!this.isModified('password')) return next();
-  
-  try {
-    // Hash the password with cost of 12
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    
-    // Update passwordChangedAt field
-    if (this.isModified('password') && !this.isNew) {
-      this.passwordChangedAt = new Date();
-    }
-    
-    next();
-  } catch (error: any) {
-    next(error);
-  }
+
+  // Hash the password with cost of 12
+  this.password = await bcrypt.hash(this.password, 12);
+
+  // Delete passwordConfirm field
+  this.passwordConfirm = undefined;
+  next();
 });
 
-// Method to compare passwords
+/**
+ * Pre-save middleware to update passwordChangedAt
+ */
+userSchema.pre<IUser>('save', function(next) {
+  if (!this.isModified('password') || this.isNew) return next();
+  
+  // Set passwordChangedAt to current time minus 1 second
+  // This ensures the token is created after the password has been changed
+  this.passwordChangedAt = new Date(Date.now() - 1000);
+  next();
+});
+
+/**
+ * Pre-find middleware to filter out inactive users
+ */
+userSchema.pre(/^find/, function(this: any, next) {
+  // 'this' points to the current query
+  this.find({ active: { $ne: false } });
+  next();
+});
+
+/**
+ * Method to compare passwords
+ */
 userSchema.methods.comparePassword = async function(
   candidatePassword: string
 ): Promise<boolean> {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to check if password was changed after token was issued
+/**
+ * Method to check if password was changed after token was issued
+ */
 userSchema.methods.changedPasswordAfter = function(JWTTimestamp: number): boolean {
   if (this.passwordChangedAt) {
     const changedTimestamp = Math.floor(
@@ -124,12 +138,28 @@ userSchema.methods.changedPasswordAfter = function(JWTTimestamp: number): boolea
     );
     return JWTTimestamp < changedTimestamp;
   }
-  
   // False means NOT changed
   return false;
 };
 
-// Create and export User model
-const User = mongoose.model<IUser, IUserModel>('User', userSchema);
+/**
+ * Method to create password reset token
+ */
+userSchema.methods.createPasswordResetToken = function(): string {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  // Token expires in 10 minutes
+  this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+  return resetToken;
+};
+
+// Create the User model
+const User: Model<IUser> = model<IUser>('User', userSchema);
 
 export default User;
