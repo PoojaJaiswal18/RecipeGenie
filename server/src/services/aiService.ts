@@ -1,6 +1,17 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { logger } from '../utils/logger';
 import { IUser } from '../models/User';
+
+// Extended IUser interface to include the properties used in the service
+interface ExtendedIUser extends IUser {
+  favorites?: Array<{ toString(): string }>;
+  recipeHistory?: Array<{
+    recipeId: { toString(): string };
+    rating?: number;
+    lastViewed?: Date;
+    saved?: boolean;
+  }>;
+}
 import { RecipeRepository } from '../repositories/recipeRepository';
 import { AIServiceConfig } from '../config/aiConfig';
 import { 
@@ -31,7 +42,7 @@ export class AIService {
   constructor() {
     this.apiUrl = AIServiceConfig.AI_SERVICE_URL;
     this.requestTimeout = AIServiceConfig.REQUEST_TIMEOUT;
-    this.recipeRepository = new RecipeRepository();
+    this.recipeRepository = new RecipeRepository(logger); // Fixed: Added logger parameter
     this.defaultRequestConfig = {
       timeout: this.requestTimeout,
       headers: {
@@ -46,14 +57,14 @@ export class AIService {
    * @param user - User object containing preferences and history
    * @returns Formatted user preferences for AI service
    */
-  private getUserPreferences(user?: IUser): UserPreferences | undefined {
+  private getUserPreferences(user?: ExtendedIUser): UserPreferences | undefined {
     if (!user) return undefined;
     
     return {
-      favorites: user.favorites?.map(id => id.toString()) || [],
+      favorites: user.favorites?.map((id) => id.toString()) || [],
       dietary_restrictions: user.preferences?.dietaryRestrictions || [],
       cuisine_preferences: user.preferences?.favoriteCuisines || [],
-      past_interactions: user.recipeHistory?.map(history => ({
+      past_interactions: user.recipeHistory?.map((history) => ({
         recipe_id: history.recipeId.toString(),
         rating: history.rating || 0,
         last_viewed: history.lastViewed?.toISOString() || '',
@@ -70,7 +81,7 @@ export class AIService {
   private extractIngredients(recipe: any): string[] {
     if (!recipe || !recipe.ingredients) return [];
     
-    return recipe.ingredients.map(ing => 
+    return recipe.ingredients.map((ing: any) => 
       typeof ing === 'string' ? ing : ing.name || ing.toString()
     );
   }
@@ -120,7 +131,7 @@ export class AIService {
    */
   public async enhanceRecipes(
     recipes: any[], 
-    user?: IUser, 
+    user?: ExtendedIUser, 
     ingredients?: string[]
   ): Promise<AIRecipeEnhancementResult> {
     if (!recipes || recipes.length === 0) {
@@ -162,7 +173,7 @@ export class AIService {
    * @param user - Optional user for personalization
    * @returns Enhanced recipe with AI-generated content
    */
-  public async enhanceSingleRecipe(recipe: any, user?: IUser): Promise<any> {
+  public async enhanceSingleRecipe(recipe: any, user?: ExtendedIUser): Promise<any> {
     if (!recipe || !recipe.ingredients || recipe.ingredients.length === 0) {
       logger.warn('Cannot enhance recipe: Missing recipe data or ingredients');
       return recipe;
@@ -591,7 +602,7 @@ export class AIService {
    */
   public async getRecipeDifficultyAssessment(
     recipe: any,
-    user?: IUser
+    user?: ExtendedIUser
   ): Promise<any> {
     if (!recipe) {
       throw new Error('Recipe is required for difficulty assessment');
