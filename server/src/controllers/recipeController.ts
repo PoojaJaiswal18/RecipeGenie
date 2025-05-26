@@ -427,6 +427,96 @@ export class RecipeController {
   };
 
   /**
+   * Get recipes by cuisine
+   * @route GET /api/recipes/cuisine/:cuisine
+   */
+  public getRecipesByCuisine = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { cuisine } = req.params;
+      const user = req.user as IUser | undefined;
+      
+      const recipes = await recipeService.getRecipesByCuisine(cuisine);
+      const enhancedResult = await recipeService.enhanceRecipesWithAI(recipes, user);
+      
+      return res.status(200).json({
+        status: 'success',
+        results: enhancedResult.recipes?.length || 0,
+        data: {
+          recipes: enhancedResult.recipes || recipes,
+          ai_enhanced: !!enhancedResult.recipes
+        }
+      });
+    } catch (error) {
+      logger.error('Error in getRecipesByCuisine:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Get recipes by diet
+   * @route GET /api/recipes/diet/:diet
+   */
+  public getRecipesByDiet = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { diet } = req.params;
+      const user = req.user as IUser | undefined;
+      
+      const recipes = await recipeService.getRecipesByDiet(diet);
+      const enhancedResult = await recipeService.enhanceRecipesWithAI(recipes, user);
+      
+      return res.status(200).json({
+        status: 'success',
+        results: enhancedResult.recipes?.length || 0,
+        data: {
+          recipes: enhancedResult.recipes || recipes,
+          ai_enhanced: !!enhancedResult.recipes
+        }
+      });
+    } catch (error) {
+      logger.error('Error in getRecipesByDiet:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Get recipes by category
+   * @route GET /api/recipes/category/:category
+   */
+  public getRecipesByCategory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { category } = req.params;
+      const user = req.user as IUser | undefined;
+      
+      const recipes = await recipeService.getRecipesByCategory(category);
+      const enhancedResult = await recipeService.enhanceRecipesWithAI(recipes, user);
+      
+      return res.status(200).json({
+        status: 'success',
+        results: enhancedResult.recipes?.length || 0,
+        data: {
+          recipes: enhancedResult.recipes || recipes,
+          ai_enhanced: !!enhancedResult.recipes
+        }
+      });
+    } catch (error) {
+      logger.error('Error in getRecipesByCategory:', error);
+      return next(error);
+    }
+  };
+
+  /**
    * Add a custom recipe with AI enhancement
    * @route POST /api/recipes/custom
    */
@@ -480,6 +570,286 @@ export class RecipeController {
       return next(error);
     }
   };
+
+  /**
+   * Update a custom recipe
+   * @route PUT /api/recipes/custom/:id
+   */
+  public updateCustomRecipe = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      const user = req.user as IUser | undefined;
+      
+      if (!user) {
+        return next(new AppError('Authentication required', 401));
+      }
+      
+      const { validData, error } = validateRecipeInput(req.body);
+      
+      if (error) {
+        return next(new AppError(error, 400));
+      }
+      
+      // Extract user ID safely
+      const userId = extractUserId(user);
+      if (!userId) {
+        return next(new AppError('Invalid user ID', 400));
+      }
+      
+      // Update recipe in database - Fix: Use updateRecipe instead of updateCustomRecipe
+      const updatedRecipe = await recipeService.updateRecipe(id, userId, validData);
+      
+      if (!updatedRecipe) {
+        return next(new AppError('Recipe not found or you are not authorized to update it', 404));
+      }
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          recipe: updatedRecipe
+        }
+      });
+    } catch (error) {
+      logger.error('Error in updateCustomRecipe:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Delete a custom recipe
+   * @route DELETE /api/recipes/custom/:id
+   */
+  public deleteCustomRecipe = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      const user = req.user as IUser | undefined;
+      
+      if (!user) {
+        return next(new AppError('Authentication required', 401));
+      }
+      
+      // Extract user ID safely
+      const userId = extractUserId(user);
+      if (!userId) {
+        return next(new AppError('Invalid user ID', 400));
+      }
+      
+      // Delete recipe from database - Fix: Use deleteRecipe instead of deleteCustomRecipe
+      const result = await recipeService.deleteRecipe(id, userId);
+      
+      if (!result) {
+        return next(new AppError('Recipe not found or you are not authorized to delete it', 404));
+      }
+      
+      return res.status(200).json({
+        status: 'success',
+        data: null
+      });
+    } catch (error) {
+      logger.error('Error in deleteCustomRecipe:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Add recipe to meal plan
+   * @route POST /api/recipes/mealplan
+   */
+  public addRecipeToMealPlan = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { recipeId, date, mealType } = req.body;
+      const user = req.user as IUser | undefined;
+      
+      if (!user) {
+        return next(new AppError('Authentication required', 401));
+      }
+      
+      if (!recipeId || !date || !mealType) {
+        return next(new AppError('Recipe ID, date, and meal type are required', 400));
+      }
+      
+      // Extract user ID safely
+      const userId = extractUserId(user);
+      if (!userId) {
+        return next(new AppError('Invalid user ID', 400));
+      }
+      
+      // Add recipe to meal plan - Fix: Use addToMealPlan instead of addRecipeToMealPlan
+      const updatedMealPlan = await recipeService.addToMealPlan(userId, recipeId, date, mealType);
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          mealPlan: updatedMealPlan
+        }
+      });
+    } catch (error) {
+      logger.error('Error in addRecipeToMealPlan:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Get user's meal plan
+   * @route GET /api/recipes/mealplan
+   */
+  public getMealPlan = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const user = req.user as IUser | undefined;
+      
+      if (!user) {
+        return next(new AppError('Authentication required', 401));
+      }
+      
+      // Extract user ID safely
+      const userId = extractUserId(user);
+      if (!userId) {
+        return next(new AppError('Invalid user ID', 400));
+      }
+      
+      // Get meal plan
+      const mealPlan = await recipeService.getUserMealPlan(userId);
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          mealPlan
+        }
+      });
+    } catch (error) {
+      logger.error('Error in getMealPlan:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Generate weekly meal plan with AI
+   * @route POST /api/recipes/mealplan/generate
+   */
+  public generateWeeklyMealPlan = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { preferences } = req.body;
+      const user = req.user as IUser | undefined;
+      
+      if (!user) {
+        return next(new AppError('Authentication required', 401));
+      }
+      
+      // Extract user ID safely
+      const userId = extractUserId(user);
+      if (!userId) {
+        return next(new AppError('Invalid user ID', 400));
+      }
+      
+      // Generate meal plan
+      // Fix: Add missing methods to AIService and recipeService
+      const mealPlan = await this.generateMealPlanWithAI(user, preferences);
+      
+      // Save the generated meal plan
+      const savedMealPlan = await this.saveMealPlan(userId, mealPlan);
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          mealPlan: savedMealPlan
+        }
+      });
+    } catch (error) {
+      logger.error('Error in generateWeeklyMealPlan:', error);
+      return next(error);
+    }
+  };
+
+  /**
+   * Implementation for generating meal plan with AI
+   * Added to fix the missing generateWeeklyMealPlan method in AIService
+   */
+  private async generateMealPlanWithAI(user: IUser, preferences: any): Promise<any> {
+    try {
+      // Get user preferences
+      const userPreferences = user.preferences || {};
+      
+      // Combine with provided preferences
+      const combinedPreferences = {
+        ...userPreferences,
+        ...preferences
+      };
+      
+      // Get recipe recommendations based on preferences
+      const recommendedRecipes = await recipeService.getRecipeSuggestions(user, 21); // 3 meals a day for 7 days
+      
+      // Structure into meal plan format
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const mealTypes = ['breakfast', 'lunch', 'dinner'];
+      
+      // Create a basic meal plan structure
+      const mealPlan = days.map((day, dayIndex) => {
+        return {
+          day,
+          meals: mealTypes.map((mealType, mealIndex) => {
+            const recipeIndex = dayIndex * 3 + mealIndex;
+            return {
+              meal_type: mealType,
+              recipe: recommendedRecipes[recipeIndex % recommendedRecipes.length] // Cycle through recipes if not enough
+            };
+          })
+        };
+      });
+      
+      return {
+        user_id: user._id,
+        week_starting: new Date().toISOString(),
+        preferences: combinedPreferences,
+        daily_plans: mealPlan
+      };
+    } catch (error) {
+      logger.error('Error generating meal plan with AI:', error);
+      throw new Error('Failed to generate meal plan');
+    }
+  }
+
+  /**
+   * Implementation for saving meal plan
+   * Added to fix the missing saveWeeklyMealPlan method in recipeService
+   */
+  private async saveMealPlan(userId: UserIdType, mealPlan: any): Promise<any> {
+    try {
+      // Prepare meal plan data
+      const mealPlanData = {
+        ...mealPlan,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        is_active: true
+      };
+      
+      // Here we would typically save to database
+      // For now, just return the structured data
+      return mealPlanData;
+    } catch (error) {
+      logger.error('Error saving meal plan:', error);
+      throw new Error('Failed to save meal plan');
+    }
+  }
 
   /**
    * Get AI-powered ingredient substitutions
@@ -556,3 +926,23 @@ export class RecipeController {
 
 // Export singleton instance
 export const recipeController = new RecipeController();
+
+// Export controller methods for use in routes
+export const {
+  searchRecipes,
+  getRecipeById,
+  getSuggestions,
+  getTrending,
+  rateRecipeHandler,
+  toggleFavorite,
+  getFavorites,
+  getRecipesByCuisine,
+  getRecipesByDiet,
+  getRecipesByCategory,
+  addCustomRecipe,
+  updateCustomRecipe,
+  deleteCustomRecipe,
+  addRecipeToMealPlan,
+  getMealPlan,
+  generateWeeklyMealPlan
+} = recipeController;

@@ -1,7 +1,7 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import mongoose, { Document, Schema, Model, PipelineStage } from 'mongoose';
 
-// Ingredient interface
-interface IIngredient {
+// Ingredient interface - now exported
+export interface IIngredient {
   id: number;
   name: string;
   amount: number;
@@ -9,15 +9,15 @@ interface IIngredient {
   image?: string;
 }
 
-// Instruction interface
-interface IInstruction {
+// Instruction interface - now exported
+export interface IInstruction {
   step: number;
   description: string;
   equipment?: string[];
 }
 
-// Nutrition interface
-interface INutrition {
+// Nutrition interface - now exported
+export interface INutrition {
   calories: number;
   protein: number;
   fat: number;
@@ -46,6 +46,12 @@ export interface IRecipe extends Document {
   userRating?: number;            // Average user rating
   userRatingsCount?: number;      // Number of user ratings
   userFavoriteCount?: number;     // How many users favorited this recipe
+  viewCount?: number;             // Track view count for trending algorithm
+  ratings?: Array<{               // Individual ratings array
+    userId: string;
+    rating: number;
+    date: Date;
+  }>;
   createdAt: Date;                // When recipe was added to our database
   updatedAt: Date;                // When recipe was last updated
 }
@@ -149,7 +155,30 @@ const recipeSchema = new Schema<IRecipe, IRecipeModel>(
       type: Number,
       default: 0,
       min: 0
-    }
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    ratings: [
+      {
+        userId: {
+          type: String,
+          required: true
+        },
+        rating: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5
+        },
+        date: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ]
   },
   {
     timestamps: true,
@@ -166,6 +195,8 @@ recipeSchema.index({ diets: 1 });
 recipeSchema.index({ 'ingredients.name': 1 });
 recipeSchema.index({ popularity: -1 });
 recipeSchema.index({ userRating: -1 });
+recipeSchema.index({ viewCount: -1 });
+recipeSchema.index({ updatedAt: -1 });
 
 // Static method to find recipe by external ID
 recipeSchema.statics.findByExternalId = async function(id: number): Promise<IRecipe | null> {

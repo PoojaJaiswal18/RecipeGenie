@@ -53,3 +53,5 @@ router.post('/user/mealplan', addRecipeToMealPlan);
 router.post('/user/mealplan/generate', generateWeeklyMealPlan);
 
 export default router;
+
+
