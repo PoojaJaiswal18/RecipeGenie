@@ -141,8 +141,12 @@ const extractUserId = (user: IUser | undefined): UserIdType | undefined => {
     // Handle both string IDs and ObjectId with proper type checking
     if (typeof user._id === 'string') {
       return user._id;
-    } else if (user._id && typeof user._id === 'object' && 'toString' in user._id) {
-      return user._id.toString();
+    } else if (
+      user._id &&
+      typeof user._id === 'object' &&
+      typeof (user._id as { toString?: unknown }).toString === 'function'
+    ) {
+      return (user._id as { toString: () => string }).toString();
     }
     
     return undefined;
