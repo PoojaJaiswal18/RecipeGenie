@@ -27,8 +27,8 @@ export const config: Config = {
   mongoURI: process.env.NODE_ENV === 'production' 
     ? process.env.MONGODB_URI_PROD || ''
     : process.env.MONGODB_URI || 'mongodb://localhost:27017/recipe-genie',
-  jwtSecret: process.env.JWT_SECRET || 'default_jwt_secret_change_this',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwtSecret: process.env.JWT_SECRET || 'your-fallback-secret', // Always a string
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d', // e.g., '7d', '1h'
   spoonacularApiKey: process.env.SPOONACULAR_API_KEY || '0fe2bd6d0c3e4951bfab386b377752a6',
   spoonacularBaseUrl: process.env.SPOONACULAR_BASE_URL || 'https://api.spoonacular.com',
   aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:5001/api/enhance-recipes',

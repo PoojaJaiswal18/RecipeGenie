@@ -1,14 +1,12 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, Secret, JwtPayload as JwtPayloadType } from 'jsonwebtoken';
 import { config } from '../config/env';
 import { IUser } from '../models/User';
 
 // Interface for JWT payload
-interface JwtPayload {
+export interface JwtPayload extends JwtPayloadType {
   id: string;
   email: string;
   role: string;
-  iat?: number; // Issued at timestamp
-  exp?: number; // Expiration timestamp
 }
 
 /**
@@ -23,9 +21,11 @@ export const generateToken = (user: IUser): string => {
     role: user.role
   };
 
-  return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn
-  });
+  // Cast expiresIn to 'any' to satisfy type checker, since library supports string durations
+  const options: SignOptions = { expiresIn: config.jwtExpiresIn as any };
+  const secret: Secret = config.jwtSecret;
+
+  return jwt.sign(payload, secret, options);
 };
 
 /**
@@ -35,11 +35,10 @@ export const generateToken = (user: IUser): string => {
  */
 export const verifyToken = (token: string): JwtPayload | null => {
   try {
-    // Verify and decode the token
-    const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    const secret: Secret = config.jwtSecret;
+    const decoded = jwt.verify(token, secret) as JwtPayload;
     return decoded;
-  } catch (error) {
-    // If token is invalid, expired, etc.
+  } catch {
     return null;
   }
 };
@@ -53,8 +52,6 @@ export const extractTokenFromHeader = (authHeader?: string): string | null => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-
-  // Format: "Bearer {token}"
   return authHeader.split(' ')[1];
 };
 
@@ -66,10 +63,9 @@ export const extractTokenFromHeader = (authHeader?: string): string | null => {
  */
 export const decodeToken = (token: string): JwtPayload | null => {
   try {
-    // Decode without verification
-    const decoded = jwt.decode(token) as JwtPayload;
+    const decoded = jwt.decode(token) as JwtPayload | null;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -82,8 +78,6 @@ export const decodeToken = (token: string): JwtPayload | null => {
 export const isTokenExpired = (token: string): boolean => {
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
-  
-  // exp is in seconds, Date.now() is in milliseconds
   const currentTime = Math.floor(Date.now() / 1000);
   return decoded.exp < currentTime;
 };
