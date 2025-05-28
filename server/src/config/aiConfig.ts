@@ -2,33 +2,26 @@
  * Configuration for AI service integration
  */
 
-// Load environment variables would typically use dotenv or similar
-// import dotenv from 'dotenv';
-// dotenv.config();
-
-/**
- * AI service configuration
- */
 export const AIServiceConfig = {
   /**
    * URL for the AI service API
    */
-  AI_SERVICE_URL: process.env.AI_SERVICE_URL || 'https://api.ai-service.example.com',
+  AI_SERVICE_URL: process.env.AI_SERVICE_URL || 'http://localhost:5001',
   
   /**
-   * API key for authentication with the AI service
+   * API key for authentication with the AI service (optional for local development)
    */
-  API_KEY: process.env.AI_SERVICE_API_KEY || 'default-api-key-for-development',
+  API_KEY: process.env.AI_SERVICE_API_KEY || '',
   
   /**
    * Request timeout in milliseconds
    */
-  REQUEST_TIMEOUT: parseInt(process.env.AI_REQUEST_TIMEOUT || '15000', 10),
+  REQUEST_TIMEOUT: parseInt(process.env.AI_REQUEST_TIMEOUT || '30000', 10),
   
   /**
    * Flag to enable/disable AI features
    */
-  ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES === 'true',
+  ENABLE_AI_FEATURES: process.env.ENABLE_AI_FEATURES !== 'false',
   
   /**
    * Maximum number of recipes to enhance in batch
@@ -44,37 +37,27 @@ export const AIServiceConfig = {
    * Retry configuration
    */
   RETRY: {
-    /**
-     * Maximum number of retry attempts
-     */
     MAX_ATTEMPTS: parseInt(process.env.AI_RETRY_MAX_ATTEMPTS || '3', 10),
-    
-    /**
-     * Initial backoff delay in milliseconds
-     */
     INITIAL_BACKOFF: parseInt(process.env.AI_RETRY_INITIAL_BACKOFF || '1000', 10),
-    
-    /**
-     * Maximum backoff delay in milliseconds
-     */
     MAX_BACKOFF: parseInt(process.env.AI_RETRY_MAX_BACKOFF || '10000', 10)
   }
 };
 
 /**
  * Function to validate that all required configuration is present
- * @returns boolean indicating if configuration is valid
  */
 export function validateAIServiceConfig(): boolean {
-  // Validate minimal configuration required for operation
   if (!AIServiceConfig.AI_SERVICE_URL) {
     console.error('AI Service URL is not configured');
     return false;
   }
-  
-  if (!AIServiceConfig.API_KEY || AIServiceConfig.API_KEY === 'default-api-key-for-development') {
-    console.warn('Using default API key for AI service, this should be changed in production');
+
+  if (AIServiceConfig.AI_SERVICE_URL.includes('example.com')) {
+    console.error('AI Service URL is still using placeholder value');
+    return false;
   }
-  
+
   return true;
 }
+
+export default AIServiceConfig;

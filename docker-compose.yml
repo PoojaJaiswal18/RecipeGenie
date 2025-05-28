@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: recipe-genie-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: recipe-genie
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - recipe-genie-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: recipe-genie-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/recipe-genie
+      - AI_SERVICE_URL=http://ai-service:5001/api/enhance-recipes
+    depends_on:
+      - mongodb
+      - ai-service
+    volumes:
+      - ./server/.env:/app/.env:ro
+    networks:
+      - recipe-genie-network
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: recipe-genie-ai
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5001
+    volumes:
+      - ./ai-service/.env:/app/.env:ro
+    networks:
+      - recipe-genie-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: recipe-genie-client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - recipe-genie-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  recipe-genie-network:
+    driver: bridge

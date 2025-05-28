@@ -12,6 +12,8 @@ import * as authMiddleware from './middleware/auth';
 import recipeRoutes from './routes/recipes';
 import { errorHandler } from './middleware/error';
 import winston from 'winston';
+import authRoutes from './routes/auth';
+
 
 // --- Winston Logger Setup (Production-grade, multi-transport) ---
 const logger = winston.createLogger({
@@ -102,6 +104,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 // If you want to expose some of the auth middleware as routes, you can do so here
 // (otherwise, REMOVE the following line, since auth middleware is not a router!)
 // app.use('/api/auth', authRoutes); // <-- Only if you have an auth router
+app.use('/api/auth', authRoutes);
 
 app.use('/api/recipes', recipeRoutes);
 
