@@ -17,7 +17,8 @@ import {
   getMealPlan,
   generateWeeklyMealPlan
 } from '../controllers/recipeController';
-import { protect } from '../middleware/auth';
+import { protect, optionalAuth, restrictTo, isResourceOwner } from '../middleware/auth';
+
 
 const router = express.Router();
 
