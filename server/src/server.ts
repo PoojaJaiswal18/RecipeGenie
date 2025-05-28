@@ -7,12 +7,13 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config/env';
 import { connectDB } from './config/db';
 import { configurePassport } from './config/passport';
-import authRoutes from './middleware/auth';
+// FIX: Use named import for auth middleware, not default import
+import * as authMiddleware from './middleware/auth';
 import recipeRoutes from './routes/recipes';
 import { errorHandler } from './middleware/error';
 import winston from 'winston';
 
-// Initialize logger
+// --- Winston Logger Setup (Production-grade, multi-transport) ---
 const logger = winston.createLogger({
   level: config.logLevel,
   format: winston.format.combine(
@@ -31,42 +32,49 @@ const logger = winston.createLogger({
   ]
 });
 
-// Uncaught exception handler
+// --- Uncaught Exception Handler ---
 process.on('uncaughtException', (err) => {
   logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  logger.error(err.name, err.message, err.stack);
+  logger.error(`${err.name}: ${err.message}\n${err.stack}`);
   process.exit(1);
 });
 
-// Create Express application
+// --- Express App Initialization ---
 const app: Application = express();
 
-// Connect to MongoDB
+// --- Trust Proxy for Rate Limiting & Security (Cloud/Proxy Ready) ---
+app.set('trust proxy', 1);
+
+// --- MongoDB Connection ---
 connectDB();
 
-// Configure Passport
+// --- Passport Configuration ---
 configurePassport();
 
-// Security headers
+// --- Security Headers ---
 app.use(helmet());
 
-// CORS configuration
+// --- CORS Configuration ---
 app.use(cors({
   origin: config.corsOrigin,
   credentials: true
 }));
 
-// Request logging
-app.use(morgan('dev'));
+// --- HTTP Request Logging (Morgan + Winston) ---
+app.use(morgan('dev', {
+  stream: {
+    write: (message) => logger.http(message.trim())
+  }
+}));
 
-// Body parsers
+// --- Body Parsers ---
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Compression
+// --- Compression (Performance) ---
 app.use(compression());
 
-// Rate limiting
+// --- Rate Limiting (Security) ---
 const limiter = rateLimit({
   windowMs: config.rateLimitWindowMs,
   max: config.rateLimitMax,
@@ -76,7 +84,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Health check endpoint
+// --- Health Check Endpoint ---
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',
@@ -86,11 +94,18 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
+// --- API Routes ---
+// If you have auth routes, import and use them here, e.g.:
+// import authRoutes from './routes/auth';
+// app.use('/api/auth', authRoutes);
+
+// If you want to expose some of the auth middleware as routes, you can do so here
+// (otherwise, REMOVE the following line, since auth middleware is not a router!)
+// app.use('/api/auth', authRoutes); // <-- Only if you have an auth router
+
 app.use('/api/recipes', recipeRoutes);
 
-// 404 handler for unmatched routes
+// --- 404 Handler ---
 app.all('*', (req: Request, res: Response) => {
   res.status(404).json({
     status: 'error',
@@ -98,25 +113,25 @@ app.all('*', (req: Request, res: Response) => {
   });
 });
 
-// Global error handler
+// --- Global Error Handler ---
 app.use(errorHandler);
 
-// Start the server
+// --- Server Startup ---
 const PORT = config.port || 5000;
 const server = app.listen(PORT, () => {
   logger.info(`Server running in ${config.nodeEnv} mode on port ${PORT}`);
 });
 
-// Unhandled rejection handler
-process.on('unhandledRejection', (err: Error) => {
+// --- Unhandled Promise Rejection Handler ---
+process.on('unhandledRejection', (err: any) => {
   logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  logger.error(err.name, err.message, err.stack);
+  logger.error(`${err.name}: ${err.message}\n${err.stack}`);
   server.close(() => {
     process.exit(1);
   });
 });
 
-// Handle SIGTERM
+// --- SIGTERM Handler (Graceful Shutdown) ---
 process.on('SIGTERM', () => {
   logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
   server.close(() => {
