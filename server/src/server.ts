@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config/env';
 import { connectDB } from './config/db';
 import { configurePassport } from './config/passport';
-import authRoutes from './routes/auth';
+import authRoutes from './middleware/auth';
 import recipeRoutes from './routes/recipes';
 import { errorHandler } from './middleware/error';
 import winston from 'winston';

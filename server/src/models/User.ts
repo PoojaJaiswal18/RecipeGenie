@@ -1,12 +1,11 @@
-import { Schema, model, Document, Model } from 'mongoose';
+import { Schema, model, Document, Model, Types } from 'mongoose'; 
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
 import crypto from 'crypto';
 
-/**
- * User Interface extending Document
- */
+
 export interface IUser extends Document {
+  _id: Types.ObjectId; // <-- Ensure _id is ObjectId
   name: string;
   email: string;
   photo?: string;
@@ -21,6 +20,8 @@ export interface IUser extends Document {
   changedPasswordAfter(JWTTimestamp: number): boolean;
   createPasswordResetToken(): string;
 }
+
+
 
 /**
  * User Schema
