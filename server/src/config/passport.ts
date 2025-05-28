@@ -4,7 +4,6 @@ import User from '../models/User';
 import { config } from './env';
 import winston from 'winston';
 
-// Initialize logger
 const logger = winston.createLogger({
   level: config.logLevel,
   format: winston.format.combine(
@@ -21,11 +20,7 @@ const logger = winston.createLogger({
   ]
 });
 
-/**
- * Configure Passport with JWT strategy
- */
 export const configurePassport = (): void => {
-  // Options for JWT strategy
   const options: StrategyOptions = {
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     secretOrKey: config.jwtSecret,
@@ -33,34 +28,28 @@ export const configurePassport = (): void => {
     algorithms: ['HS256']
   };
   
-  // Define JWT strategy
   passport.use(
     new JwtStrategy(options, async (jwtPayload, done) => {
       try {
-        // Find user by ID from JWT payload
         const user = await User.findById(jwtPayload.id).select('-password');
-        
         if (!user) {
           return done(null, false, { message: 'User not found' });
         }
-        
-        if (!user.isActive) {
+        if (!user.active) {
           return done(null, false, { message: 'User account is deactivated' });
         }
-        
-        // Update last activity if needed
-        if (user.lastActive) {
+
+        // Update lastActivity if needed
+        if (user.lastActivity) {
           const now = new Date();
-          const lastActive = new Date(user.lastActive);
-          const diffHours = Math.abs(now.getTime() - lastActive.getTime()) / 36e5; // Convert ms to hours
-          
+          const lastActivity = new Date(user.lastActivity);
+          const diffHours = Math.abs(now.getTime() - lastActivity.getTime()) / 36e5;
           if (diffHours > 1) {
-            user.lastActive = now;
+            user.lastActivity = now;
             await user.save({ validateBeforeSave: false });
           }
         }
-        
-        // Return the user
+
         return done(null, user);
       } catch (error: any) {
         logger.error(`Error in JWT strategy: ${error.message}`);
@@ -70,9 +59,8 @@ export const configurePassport = (): void => {
   );
 };
 
-// Initialize passport
 export const initializePassport = (): void => {
   passport.initialize();
-}
+};
 
 export default passport;

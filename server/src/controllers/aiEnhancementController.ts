@@ -3,6 +3,7 @@ import { AppError } from '../middleware/error';
 import { IUser } from '../models/User';
 import Recipe, { IRecipe, IIngredient, IInstruction, INutrition } from '../models/Recipe';
 import winston from 'winston';
+import { Types } from 'mongoose';
 
 // Enhanced logger configuration with proper export structure
 const logger = winston.createLogger({
@@ -34,6 +35,24 @@ const logger = winston.createLogger({
     })
   ]
 });
+
+// **Enhanced Type Definitions for Better Type Safety**
+interface AuthenticatedUser {
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
+  role: string;
+  preferences?: UserPreferences;
+  mealPlan?: Array<{
+    recipeId: string;
+    date: Date;
+    mealType: string;
+  }>;
+}
+
+interface ExtendedRequest extends Request {
+  user?: AuthenticatedUser;
+}
 
 // Enhanced validation utilities with comprehensive type checking
 class ValidationUtils {
@@ -87,6 +106,20 @@ class ValidationUtils {
   static validateObjectWithProperties(obj: any, requiredProps: string[]): boolean {
     if (!obj || typeof obj !== 'object') return false;
     return requiredProps.every(prop => prop in obj);
+  }
+
+  /**
+   * Safely converts AuthenticatedUser to IUser format
+   */
+  static convertToIUser(authUser: AuthenticatedUser): IUser {
+    return {
+      _id: authUser._id.toString(),
+      name: authUser.name,
+      email: authUser.email,
+      role: authUser.role,
+      preferences: authUser.preferences,
+      mealPlan: authUser.mealPlan
+    } as IUser;
   }
 }
 
@@ -186,7 +219,7 @@ interface TrainingData {
   };
 }
 
-// Enhanced AI Service Implementation
+// **Enhanced AI Service Implementation with Type Safety**
 class AIService {
   private static instance: AIService;
   private modelCache: Map<string, any> = new Map();
@@ -217,12 +250,10 @@ class AIService {
         context
       });
 
-      // Convert IRecipe[] to EnhancedRecipe[] with proper type handling
       const enhancedRecipes: EnhancedRecipe[] = await Promise.all(
         recipes.map(async (recipe) => {
           const enhancement = await this.enhanceSingleRecipe(recipe, userPreferences, ingredients);
           
-          // Create enhanced recipe with proper typing
           const enhancedRecipe: EnhancedRecipe = {
             ...recipe.toObject ? recipe.toObject() : recipe,
             ...enhancement,
@@ -264,7 +295,6 @@ class AIService {
         generateSubstitutions
       });
 
-      // Enhanced analysis logic
       const analysis = await this.performIngredientAnalysis(
         ingredients, 
         dietaryRestrictions, 
@@ -308,7 +338,6 @@ class AIService {
     try {
       logger.info(`Generating cooking tips for recipe: ${recipeTitle}`);
 
-      // Enhanced tip generation logic
       const tips = await this.generateCookingTips(ingredients, instructions);
       const techniques = await this.suggestCookingTechniques(ingredients, instructions);
       const alternatives = await this.generateAlternativeMethods(instructions);
@@ -329,7 +358,7 @@ class AIService {
   }
 
   /**
-   * Enhanced shopping list generation
+   * Enhanced shopping list generation with proper type conversion
    */
   async generateShoppingList(
     user: IUser, 
@@ -345,7 +374,6 @@ class AIService {
       let recipes: IRecipe[] = [];
 
       if (useMealPlan && user.mealPlan) {
-        // Extract recipes from meal plan
         const mealPlanRecipeIds = user.mealPlan.map(entry => entry.recipeId);
         recipes = await Recipe.find({ _id: { $in: mealPlanRecipeIds } }).lean();
       } else if (recipeIds && recipeIds.length > 0) {
@@ -395,7 +423,6 @@ class AIService {
     try {
       logger.info(`Training AI model with ${trainingData.length} data points`, { forceRetrain });
 
-      // Enhanced training logic with validation
       const validatedData = trainingData.filter(data => 
         this.validateTrainingData(data)
       );
@@ -404,7 +431,6 @@ class AIService {
         throw new AppError('No valid training data provided', 400);
       }
 
-      // Simulate model training
       const modelId = `model_${Date.now()}`;
       const trainingResult = {
         modelId,
@@ -415,7 +441,6 @@ class AIService {
         timestamp: new Date()
       };
 
-      // Cache the model
       this.modelCache.set(modelId, trainingResult);
 
       logger.info(`Model training completed: ${modelId}`);
@@ -426,14 +451,13 @@ class AIService {
     }
   }
 
-  // Private helper methods
+  // **Private helper methods with enhanced type safety**
 
   private async enhanceSingleRecipe(
     recipe: IRecipe, 
     userPreferences?: UserPreferences, 
     ingredients?: string[]
   ): Promise<Partial<EnhancedRecipe>> {
-    // Enhanced recipe enhancement logic with proper typing
     const enhancement: Partial<EnhancedRecipe> = {};
 
     if (userPreferences?.cookingSkillLevel) {
@@ -458,21 +482,17 @@ class AIService {
     dietaryRestrictions: string[], 
     nutritionalAnalysis: boolean
   ): Promise<IngredientAnalysisResult['analysis']> {
-    // Enhanced ingredient analysis
     const nutritionalValue: Record<string, number> = {};
     const allergenWarnings: string[] = [];
     const seasonality: Record<string, string> = {};
 
     ingredients.forEach(ingredient => {
-      // Simulate nutritional analysis
       nutritionalValue[ingredient] = Math.floor(Math.random() * 100);
       
-      // Check for common allergens
       if (this.isAllergen(ingredient)) {
         allergenWarnings.push(`${ingredient} may contain allergens`);
       }
 
-      // Determine seasonality
       seasonality[ingredient] = this.getSeasonality(ingredient);
     });
 
@@ -582,7 +602,6 @@ class AIService {
         const quantity = typeof ingredient === 'string' ? '1 unit' : `${ingredient.amount} ${ingredient.unit}`;
 
         if (ingredientMap.has(name)) {
-          // Combine quantities if ingredient already exists
           const existing = ingredientMap.get(name)!;
           existing.quantity = this.combineQuantities(existing.quantity, quantity);
         } else {
@@ -660,12 +679,11 @@ class AIService {
   }
 
   private combineQuantities(qty1: string, qty2: string): string {
-    // Simple quantity combination logic
     return `${qty1} + ${qty2}`;
   }
 }
 
-// Enhanced DTOs with comprehensive validation
+// **Enhanced DTOs with comprehensive validation**
 interface EnhanceRecipesRequestDto {
   recipes: IRecipe[];
   user_preferences?: UserPreferences;
@@ -699,7 +717,7 @@ interface ShoppingListRequestDto {
   useMealPlan?: boolean;
 }
 
-// Enhanced controller functions with comprehensive error handling
+// **Enhanced controller functions with comprehensive error handling and type safety**
 const aiService = AIService.getInstance();
 
 /**
@@ -714,7 +732,6 @@ const enhanceRecipesHandler = async (
   try {
     const { recipes, user_preferences, ingredients, context } = req.body as EnhanceRecipesRequestDto;
     
-    // Enhanced validation
     if (!ValidationUtils.validateInputArray(recipes)) {
       return next(new AppError('Valid recipes array is required', 400));
     }
@@ -730,7 +747,6 @@ const enhanceRecipesHandler = async (
       context
     });
     
-    // Call AI service to enhance recipes
     const enhancedRecipes = await aiService.enhanceRecipes({
       recipes,
       userPreferences: user_preferences,
@@ -777,7 +793,6 @@ const analyzeIngredientsHandler = async (
       nutritional_analysis
     } = req.body as AnalyzeIngredientsRequestDto;
     
-    // Enhanced validation
     if (!ValidationUtils.validateStringArray(ingredients)) {
       return next(new AppError('Valid ingredients array is required', 400));
     }
@@ -788,7 +803,6 @@ const analyzeIngredientsHandler = async (
 
     const startTime = Date.now();
     
-    // Call AI service for ingredient analysis
     const analysis = await aiService.analyzeIngredients({
       ingredients,
       dietaryRestrictions: dietary_restrictions || [],
@@ -832,14 +846,11 @@ const getCookingTipsHandler = async (
       return next(new AppError('Valid recipe ID is required', 400));
     }
 
-    // Get recipe details with enhanced error handling
     let recipe: IRecipe | null = null;
     
-    // Check if this is a MongoDB ObjectId or external ID
     if (/^[0-9a-fA-F]{24}$/.test(id)) {
       recipe = await Recipe.findById(id).lean();
     } else {
-      // Try to get by external ID
       const externalId = parseInt(id, 10);
       
       if (isNaN(externalId)) {
@@ -853,17 +864,14 @@ const getCookingTipsHandler = async (
       return next(new AppError('Recipe not found', 404));
     }
     
-    // Extract ingredients from recipe with proper type handling
     const ingredients = recipe.ingredients.map(ing => 
       typeof ing === 'string' ? ing : ing.name
     );
 
-    // Convert instructions to string format for AI processing
     const instructionsText = recipe.instructions
       .map(inst => inst.description)
       .join('. ');
     
-    // Get cooking tips from AI service
     const cookingTips = await aiService.getCookingTipsForRecipe(
       ingredients,
       recipe.title,
@@ -895,19 +903,21 @@ const getCookingTipsHandler = async (
  * @route POST /api/ai/shopping-list
  */
 const generateShoppingListHandler = async (
-  req: Request,
+  req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { recipeIds, useMealPlan } = req.body as ShoppingListRequestDto;
-    const user = req.user as IUser;
+    const authUser = req.user;
     
-    if (!user) {
+    if (!authUser) {
       return next(new AppError('Authentication required', 401));
     }
+
+    // **Safe type conversion using ValidationUtils**
+    const user = ValidationUtils.convertToIUser(authUser);
     
-    // Enhanced validation with proper null checking
     const validRecipeIds = ValidationUtils.validateInputArray(recipeIds) ? recipeIds : [];
     
     if (validRecipeIds.length === 0 && !useMealPlan) {
@@ -920,7 +930,6 @@ const generateShoppingListHandler = async (
     
     const startTime = Date.now();
     
-    // Get shopping list from service
     const shoppingListResult = await aiService.generateShoppingList(
       user, 
       validRecipeIds, 
@@ -957,7 +966,7 @@ const generateShoppingListHandler = async (
  * @access Admin only
  */
 const trainAIModelHandler = async (
-  req: Request,
+  req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -967,15 +976,13 @@ const trainAIModelHandler = async (
       force_retrain?: boolean
     };
     
-    // Enhanced admin verification
     if (force_retrain) {
-      const user = req.user as IUser;
-      if (!user || !user.role || user.role !== 'admin') {
+      const authUser = req.user;
+      if (!authUser || !authUser.role || authUser.role !== 'admin') {
         return next(new AppError('Admin access required for forced retraining', 403));
       }
     }
     
-    // Enhanced validation
     if (!ValidationUtils.validateInputArray(training_data)) {
       return next(new AppError('Valid training data array is required', 400));
     }
@@ -986,7 +993,6 @@ const trainAIModelHandler = async (
     
     const startTime = Date.now();
     
-    // Call AI service for model training
     const trainingResult = await aiService.trainModel(training_data, force_retrain || false);
     
     const endTime = Date.now();
@@ -1019,7 +1025,6 @@ const getIngredientSubstitutionsHandler = async (
   try {
     const { ingredients, restrictions } = req.body;
     
-    // Enhanced validation
     if (!ValidationUtils.validateStringArray(ingredients)) {
       return next(new AppError('Valid ingredients array is required', 400));
     }
@@ -1032,7 +1037,6 @@ const getIngredientSubstitutionsHandler = async (
     
     const startTime = Date.now();
     
-    // Get substitutions from AI service via ingredient analysis
     const analysisResult = await aiService.analyzeIngredients({
       ingredients,
       dietaryRestrictions: validatedRestrictions,
@@ -1065,17 +1069,20 @@ const getIngredientSubstitutionsHandler = async (
  * @route POST /api/ai/recommendations
  */
 const getPersonalizedRecommendationsHandler = async (
-  req: Request,
+  req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { preferences, limit = 10 } = req.body;
-    const user = req.user as IUser;
+    const authUser = req.user;
     
-    if (!user) {
+    if (!authUser) {
       return next(new AppError('Authentication required', 401));
     }
+
+    // **Safe type conversion using ValidationUtils**
+    const user = ValidationUtils.convertToIUser(authUser);
 
     if (!ValidationUtils.validatePositiveNumber(limit) || limit > 50) {
       return next(new AppError('Limit must be a positive number not exceeding 50', 400));
@@ -1083,18 +1090,15 @@ const getPersonalizedRecommendationsHandler = async (
 
     const startTime = Date.now();
     
-    // Get user's recent interactions and preferences
     const userPreferences = {
       ...user.preferences,
       ...preferences
     };
 
-    // Get recipes based on preferences
     const recipes = await Recipe.find({})
-      .limit(limit * 2) // Get more to filter and enhance
+      .limit(limit * 2)
       .lean();
 
-    // Enhance with AI
     const enhancedRecipes = await aiService.enhanceRecipes({
       recipes: recipes.slice(0, limit),
       userPreferences,
@@ -1119,7 +1123,7 @@ const getPersonalizedRecommendationsHandler = async (
   }
 };
 
-// Single export statement to avoid redeclaration errors
+// **Single export statement to avoid redeclaration errors**
 export {
   enhanceRecipesHandler,
   analyzeIngredientsHandler,
